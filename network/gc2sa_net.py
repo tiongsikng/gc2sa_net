@@ -13,6 +13,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 import numbers
+import sys, os
+sys.path.insert(0, os.path.abspath('.'))
+from network import load_model
 
 class Flatten(Module):
     def forward(self, input):
@@ -166,3 +169,12 @@ class GC2SA_Net(Module):
         emb = self.bn(emb)
 
         return F.normalize(emb, p=2, dim=1)
+    
+    
+if __name__ == '__main__':
+    embd_dim = 1024
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
+
+    load_model_path = './models/best_model/GC2SA-Net.pth'
+    model = GC2SA_Net(embedding_size = embd_dim).eval().to(device)
+    model = load_model.load_pretrained_network(model, load_model_path, device = device)

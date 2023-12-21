@@ -276,7 +276,7 @@ if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
 
     load_model_path = './models/best_model/GC2SA-Net.pth'
-    model = net.GCCSA_Net(embedding_size = embd_dim).eval().to(device)
+    model = net.GC2SA_Net(embedding_size = embd_dim).eval().to(device)
     model = load_model.load_pretrained_network(model, load_model_path, device = device)
 
     peri_eer_dict = intramodal_verify(model, emb_size = embd_dim, peri_flag = True, root_drt = config.evaluation['verification'], device = device)
