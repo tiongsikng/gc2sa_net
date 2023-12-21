@@ -19,17 +19,18 @@ The project directories are as follows:
 - graphs: Directory where graphs are generated.
     * _CMC and ROC curve file is generated in this directory._
 - logs: Directory where logs are generated.
-    * _Logs will be generated in this directory. Each log folder will contain backups of training files with network files used._
+    * _Logs will be generated in this directory. Each log folder will contain backups of training files with network files and hyperparameters used._
 - models: Directory to store pre-trained models. Trained models are also generated in this directory.
-    * __**INSERT PRE-TRAINED MODELS HERE**__
+    * __**INSERT PRE-TRAINED MODELS HERE. The base MobileFaceNet for fine-tuning the GC<sup>2</sup>SA-Net can be downloaded in [this link](https://www.dropbox.com/scl/fo/sx61beaupkwa1574fst2z/h?rlkey=onwf8vji3h20og0w7s6sxznlc&dl=0).**__
     * _Trained models will also be stored in this directory._
 - network: Contains loss functions and network related files.
-    * `facexzoo_network` - Directory contains architecture files from FaceXZoo. Pretrained models can be downloaded from [FaceXZoo](https://github.com/JDAI-CV/FaceX-Zoo/tree/main/training_mode) repository on GitHub.
-    * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely HA-ViT and CMB-Net. _Since HA-ViT has its own data loader and has a slightly different setting, the `HA_ViT` directory contains its own data loader and evaluation (identification+CMC and verification+ROC) files for simplicity._
-    * ael_net.py - Architecture file for AELNet.
+    * `facexzoo_network` - Directory contains architecture files from [FaceXZoo](https://github.com/JDAI-CV/FaceX-Zoo/tree/main/training_mode) repository on GitHub. All pre-trained weights are fairly trained. The weight files can be downloaded from the repository, or [here](https://www.dropbox.com/scl/fo/sx61beaupkwa1574fst2z/h?rlkey=onwf8vji3h20og0w7s6sxznlc&dl=0).
+    * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely PF-GLSR, CMB-Net, and HA-ViT (see table below). _Since HA-ViT has its own data loader and has a slightly different setting, the `HA_ViT` directory contains its own data loader and evaluation (identification+CMC and verification+ROC) files for simplicity._
+    * flops_counter.py - Counter for Floating Point Operations (FLOPs) and mumber of parameters for architectures. They are stored in the files `macs_dict.pt` and `params_dict.pt`
+    * gc2sa_net.py - Architecture file for GC<sup>2</sup>SA-Net.
     * load_model.py - Loads pre-trained weights based on a given model.
     * logits.py - Contains some loss functions that are used.
-- __training:__ Main files for training AELNet.
+- __training:__ Main files for training GC<sup>2</sup>SA-Net.
     * main.py - Main file to run for training. Settings and hyperparameters are based on the files in `configs` directory.
     * train.py - Training file that is called from `main.py`. Gets batch of dataloader and contains criterion for loss back-propagation.
 
@@ -54,8 +55,14 @@ Download dataset (training and testing) from [this link](https://www.dropbox.com
 
 ### Comparison with State-of-the-Art (SOTA) models
 
-| Method | Rank-1 IR (%) <br> (Periocular Gallery) | Rank-1 IR (%) <br> (Face Gallery) | EER (%) <br> (Periocular-Face) |
-| --- | --- | --- | --- |
-| [CMB-Net](https://www.dropbox.com/s/apbejkd082dn0tp/CMB-Net.pth?dl=0) | 77.26 | 68.22 | 9.80 |
-| [HA-ViT](https://www.dropbox.com/s/hzmsz7kuyvyrf75/HA-ViT.pth?dl=0) | 64.72 | 64.01 | 13.14 |
-| [GC<sup>2</sup>-Net]() | 92.47 | 90.71 | 6.31 |
+| Method | Intra-Modal Rank-1 IR (%) <br> (Periocular) | Intra-Modal Rank-1 EER (%) <br> (Periocular) | Intra-Modal EER (%) <br> (Periocular Gallery) | Inter-Modal EER (%) <br> (Periocular-Face) |
+| --- | --- | --- | --- | --- |
+| [PF-GLSR](https://www.dropbox.com/scl/fo/o7rxtbws8g3fmhwkg0f08/h?rlkey=083q0xzibpsfubxmt3d31pa8d&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/9159854) | 79.03 | 15.56 | N/A | N/A |
+| [CMB-Net](https://www.dropbox.com/scl/fo/o7rxtbws8g3fmhwkg0f08/h?rlkey=083q0xzibpsfubxmt3d31pa8d&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/9956636) | 86.96 | 9.62 | 77.26 | 9.80 |
+| [HA-ViT](https://www.dropbox.com/scl/fo/o7rxtbws8g3fmhwkg0f08/h?rlkey=083q0xzibpsfubxmt3d31pa8d&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/10068230) | 77.75 | 11.39 | 64.72 | 13.14 |
+| [GC<sup>2</sup>SA-Net](https://www.dropbox.com/scl/fo/j7tfsk61jz6dch8hyl1hp/h?rlkey=b22nw4ff5kelu5ivti7ioy1mr&dl=0) | 93.63 | 6.39 | 90.77 | 6.50 |
+
+
+#### Pending:
+- [ ] GradCAM file
+- [ ] t-SNE file
