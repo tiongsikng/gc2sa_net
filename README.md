@@ -1,7 +1,7 @@
 # Gated Convolutional Channel-wise Self-Attention Network (GC<sup>2</sup>SA-Net)
 ## Self-Attentive Contrastive Learning for Conditioned Periocular and Face Biometrics
 
-![Network Architecture](GC2SA_Net_Architecture.png?raw=true "GC<sup>2</sup>SA-Net")
+![Network Architecture](GC2SA_Net_Architecture.jpg?raw=true "GC<sup>2</sup>SA-Net")
 
 The project directories are as follows:
 
