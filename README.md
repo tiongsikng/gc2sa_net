@@ -1,6 +1,8 @@
 # Gated Convolutional Channel-wise Self-Attention Network (GC<sup>2</sup>SA-Net)
 ## Self-Attentive Contrastive Learning for Conditioned Periocular and Face Biometrics
 
+![Network Architecture](GC2SA_Net_Architecture.png?raw=true "GC<sup>2</sup>SA-Net")
+
 The project directories are as follows:
 
 - configs: Dataset path configuration file and hyperparameters.
@@ -24,9 +26,9 @@ The project directories are as follows:
     * __**INSERT PRE-TRAINED MODELS HERE. The base MobileFaceNet for fine-tuning the GC<sup>2</sup>SA-Net can be downloaded in [this link](https://www.dropbox.com/scl/fo/sx61beaupkwa1574fst2z/h?rlkey=onwf8vji3h20og0w7s6sxznlc&dl=0).**__
     * _Trained models will also be stored in this directory._
 - network: Contains loss functions and network related files.
-    * `facexzoo_network` - Directory contains architecture files from [FaceXZoo](https://github.com/JDAI-CV/FaceX-Zoo/tree/main/training_mode) repository on GitHub. All pre-trained weights are fairly trained. The weight files can be downloaded from the repository, or [here](https://www.dropbox.com/scl/fo/sx61beaupkwa1574fst2z/h?rlkey=onwf8vji3h20og0w7s6sxznlc&dl=0).
+    * `facexzoo_network` - Directory contains architecture files from [FaceXZoo](https://github.com/JDAI-CV/FaceX-Zoo/tree/main/training_mode) repository on GitHub. All pre-trained weights are fairly trained. The weight files can be downloaded from the repository, or [here](https://www.dropbox.com/scl/fo/rnmj0n572gmfkshfplk6u/h?rlkey=lze6kbg2q0mcdrimz5qlkdjqw&dl=0).
     * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely PF-GLSR, CMB-Net, and HA-ViT (see table below). _Since HA-ViT has its own data loader and has a slightly different setting, the `HA_ViT` directory contains its own data loader and evaluation (identification+CMC and verification+ROC) files for simplicity._
-    * flops_counter.py - Counter for Floating Point Operations (FLOPs) and mumber of parameters for architectures. They are stored in the files `macs_dict.pt` and `params_dict.pt`
+    * flops_counter.py - Counter for Floating Point Operations (FLOPs) and number of parameters for architectures. They are stored in the files `macs_dict.pt` and `params_dict.pt`
     * gc2sa_net.py - Architecture file for GC<sup>2</sup>SA-Net.
     * load_model.py - Loads pre-trained weights based on a given model.
     * logits.py - Contains some loss functions that are used.
@@ -45,7 +47,7 @@ Download dataset (training and testing) from [this link](https://www.dropbox.com
 4. Testing will be performed automatically after training is done, but it is possible to perform testing on an already trained model (see next section).
 
 ### Testing:
-0. Pre-trained models for fine-tuning can be downloaded from [this link](https://www.dropbox.com/s/g8gn4x4wp0svyx5/pretrained_models.zip?dl=0). Password is _conditional\_biometrics_.
+0. Pre-trained models for fine-tuning or testing can be downloaded from [this link](https://www.dropbox.com/s/g8gn4x4wp0svyx5/pretrained_models.zip?dl=0). Password is _conditional\_biometrics_.
 1. Based on the (pre-)trained models in the `models(/pretrained)` directory, load the correct model and the architecture (in `network` directory) using `load_model.py` file. Change the file accordingly in case of different layer names, etc.
 2. Evaluation:
     * Cumulative Matching Characteristic (CMC) curve: Run `cmc_eval.py`. Based on the generated `.pt` files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate CMC graph.
