@@ -147,7 +147,7 @@ def intramodal_verify(model, emb_size = 512, root_drt=config.evaluation['verific
                 ocular = ocular.to(device)
                 onehot = onehot.to(device)
 
-                feature = model(ocular, peri_flag=False)
+                feature = model(ocular, peri_flag=peri_flag)
 
                 embedding_mat[i*batch_size:i*batch_size+nof_img, :] = feature.detach().clone()
                 label_mat[i*batch_size:i*batch_size+nof_img, :] = onehot
@@ -217,9 +217,9 @@ def intermodal_verify(model, face_model, peri_model, emb_size = 512, root_drt=co
                 peri_onehot = peri_onehot.to(device)
 
                 if not peri_model is None:
-                    peri_feature = peri_model(peri_ocular, peri_flag = False)
+                    peri_feature = peri_model(peri_ocular, peri_flag = True)
                 else:
-                    peri_feature = model(peri_ocular, peri_flag = False)
+                    peri_feature = model(peri_ocular, peri_flag = True)
 
                 peri_embedding_mat[i*batch_size:i*batch_size+nof_peri_img, :] = peri_feature.detach().clone()                
                 peri_label_mat[i*batch_size:i*batch_size+nof_peri_img, :] = peri_onehot
