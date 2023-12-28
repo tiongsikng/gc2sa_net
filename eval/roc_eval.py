@@ -13,6 +13,9 @@ import time
 from configs import datasets_config as config
 
 torch.backends.cudnn.enabled = True
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 batch_size = 500
 eer_dict = {'ethnic' : 0, 'pubfig' : 0, 'facescrub': 0, 'imdb_wiki' : 0, 'ar' : 0}
@@ -269,7 +272,7 @@ def intermodal_verify(model, face_model, peri_model, emb_size = 512, root_drt=co
 
 
 if __name__ == '__main__':
-    method = 'gc2sa_net_test'
+    method = 'gc2sa_net'
     create_folder(method)
     embd_dim = 1024
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
