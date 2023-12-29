@@ -37,6 +37,8 @@ def create_folder(method):
 
 def get_avg(dict_list):
     total_eer = 0
+    if 'avg' in dict_list.keys():
+        del dict_list['avg']
     for items in dict_list:
         total_eer += dict_list[items]
     dict_list['avg'] = total_eer/len(dict_list)
