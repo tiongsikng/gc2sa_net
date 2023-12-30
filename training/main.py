@@ -17,7 +17,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues
     from datetime import datetime
     import json
     import argparse
-    from torchsummary import summary
+    # from torchsummary import summary
 
     sys.path.insert(0, os.path.abspath('.'))
     from configs.params import *
@@ -50,7 +50,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues
                         metavar='Weight Decay', help='weight decay')
     parser.add_argument('--dropout', '--dropout', default=params.dropout, type=float,
                         metavar='Dropout', help='dropout probability')
-    parser.add_argument('--pretrained', default='/home/tiongsik/Python/magnum_opus/models/pretrained/MobileFaceNet_1024.pt', type=str, metavar='PATH',
+    parser.add_argument('--pretrained', default='./models/pretrained/MobileFaceNet_1024.pt', type=str, metavar='PATH',
                         help='path to pretrained checkpoint (default: none)')
 
     args = parser.parse_args()
@@ -401,7 +401,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues
 
     #### Start Training
 
-    for epoch in range(0, 1):    
+    for epoch in range(epochs):    
         print()
         print()        
         print('Epoch {}/{}'.format(epoch + 1, epochs))
