@@ -1,5 +1,7 @@
 # Gated Convolutional Channel-wise Self-Attention Network (GC<sup>2</sup>SA-Net)
 ## Self-Attentive Contrastive Learning for Conditioned Periocular and Face Biometrics
+### Published in Transaction of Information Forensics and Security (DOI: 10.1109/TIFS.2024.3361216)
+[[Paper Link]](https://ieeexplore.ieee.org/document/10418204)
 
 ![Network Architecture](GC2SA_Net_Architecture.jpg?raw=true "GC<sup>2</sup>SA-Net")
 
