@@ -254,7 +254,7 @@ def inter_cmc_extractor(model, root_pth='./data/', facenet = None, perinet = Non
 
         else:            
             for probes in peri_data_loaders:                
-                face_fea_gal, face_lbl_gal = feature_extractor(perinet, face_data_load_gal, device = device, peri_flag = False)
+                face_fea_gal, face_lbl_gal = feature_extractor(facenet, face_data_load_gal, device = device, peri_flag = False)
                 peri_fea_pr, peri_lbl_pr = feature_extractor(perinet, probes, device = device, peri_flag = True)
                 peri_lbl_pr, face_lbl_gal = F.one_hot(peri_lbl_pr), F.one_hot(face_lbl_gal)
 
@@ -263,7 +263,7 @@ def inter_cmc_extractor(model, root_pth='./data/', facenet = None, perinet = Non
 
             for probes in face_data_loaders:                
                 peri_fea_gal, peri_lbl_gal = feature_extractor(perinet, peri_data_load_gal, device = device, peri_flag = True)
-                face_fea_pr, face_lbl_pr = feature_extractor(perinet, probes, device = device, peri_flag = False)
+                face_fea_pr, face_lbl_pr = feature_extractor(facenet, probes, device = device, peri_flag = False)
                 face_lbl_pr, peri_lbl_gal = F.one_hot(face_lbl_pr), F.one_hot(peri_lbl_gal)
 
                 rng_p, cmc_p = calculate_cmc(peri_fea_gal, face_fea_pr, peri_lbl_gal, face_lbl_pr, last_rank=rank)

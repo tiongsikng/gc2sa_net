@@ -41,7 +41,7 @@ The project directories are as follows:
     * train.py - Training file that is called from `main.py`. Gets batch of dataloader and contains criterion for loss back-propagation.
 
 ### Pre-requisites (requirements):
-Check `environment.yml` file, which was generated using `conda env export > environment.yml --no-builds` command. Else, check `requirements.txt` file which was generated using `pip list --format=freeze > requirements.txt` command. These files are not filtered, so there may be redundant packages.
+Check `requirements.txt` file which was generated using `pip list --format=freeze > requirements.txt` command. These files are slightly filtered, so there may be redundant packages.
 Download dataset (training and testing) from [this link](https://www.dropbox.com/s/bfub8fmc44tvcxb/periocular_face_dataset.zip?dl=0). Password is _conditional\_biometrics_.
 
 ### Training:
