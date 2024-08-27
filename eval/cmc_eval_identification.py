@@ -5,12 +5,12 @@ import time
 import torch
 import torch.utils.data
 from torch.nn import functional as F
-from network.SOTA.HA_ViT import data_loader_havit as data_loader
-from configs import datasets_config as config
+from data import data_loader
 from sklearn.metrics import pairwise
 from sklearn.model_selection import KFold
-import network.SOTA.HA_ViT.HA_ViT as net
+import network.gc2sa_net as net
 from network import load_model
+from configs import datasets_config as config
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.deterministic = True
@@ -26,9 +26,6 @@ inter_cmc_dict_p = {}
 inter_cmc_avg_dict_p = {}
 inter_cmc_dict_f = {}
 inter_cmc_avg_dict_f = {}
-dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar'] 
-
-
 dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar']
 dset_name = ['Ethnic', 'Pubfig', 'FaceScrub', 'IMDb Wiki', 'AR']
 
@@ -43,45 +40,21 @@ def create_folder(method):
 
 def get_avg(dict_list):
     total_ir = 0
+    ir_list = []
     if 'avg' in dict_list.keys():
         del dict_list['avg']
+    if 'std' in dict_list.keys():
+        del dict_list['std']
     for items in dict_list:
         total_ir += dict_list[items]
-    dict_list['avg'] = total_ir/len(dict_list)
+        ir_list.append(dict_list[items])
+    dict_list['avg'] = total_ir/len(dict_list) * 100
+    dict_list['std'] = np.std(np.array(ir_list)) * 100
 
     return dict_list
 
 
-def feature_extractor(model, data_loader, device = 'cuda:0', peri_flag = False):    
-    emb = torch.tensor([])
-    lbl = torch.tensor([], dtype = torch.int64)
-
-    model = model.eval().to(device)
-    
-    with torch.no_grad():        
-        for batch_idx, (x, y) in enumerate(data_loader):
-            x = x.to(device)
-            x, _ = model(x.unsqueeze(1), peri_flag = peri_flag)
-
-            emb = torch.cat((emb, x.detach().cpu()), 0)
-            lbl = torch.cat((lbl, y))
-            
-            del x, y
-            time.sleep(0.0001)
-
-    # print('Set Capacity\t: ', emb.size())
-    assert(emb.size()[0] == lbl.size()[0])
-    
-    del data_loader
-    time.sleep(0.0001)
-
-    del model
-    
-    return emb, lbl
-
-
-# Intra-modal Identification (Main)
-def main_intramodal_id(model, root_pth=config.evaluation['identification'], modal='periocular', peri_flag = True, device = 'cuda:0'):
+def main_intramodal_id(model, root_pth=config.evaluation['identification'], modal='periocular', peri_flag=True, device='cuda:0'):
     print('Modal:', modal[:4])
 
     for datasets in dset_list:
@@ -109,7 +82,7 @@ def main_intramodal_id(model, root_pth=config.evaluation['identification'], moda
         if datasets == 'ethnic':
             ethnic_gal_data_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/' + modal[:4] + '/'), 'test', type=modal, aug='False')
             ethnic_pr_data_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/' + modal[:4] + '/'), 'test', type=modal, aug='False')
-            _, acc = intramodal_id(model, ethnic_gal_data_load, ethnic_pr_data_load, device = device, peri_flag = peri_flag)
+            _, acc = intramodal_id(model, ethnic_gal_data_load, ethnic_pr_data_load, device=device, peri_flag=peri_flag)
 
         else:
                 for i in range(len(probe_data_loaders)):
@@ -127,14 +100,13 @@ def main_intramodal_id(model, root_pth=config.evaluation['identification'], moda
     return id_dict
 
 
-# Inter-modal Identification (Main)
-def main_intermodal_id(model, root_pth=config.evaluation['identification'], face_model = None, peri_model = None, device = 'cuda:0'):
+# Inter-Modal Identification (Main)
+def main_intermodal_id(model, root_pth=config.evaluation['identification'], face_model=None, peri_model=None, device='cuda:0'):
     for datasets in dset_list:
 
         root_drt = root_pth + datasets + '/**'
         modal_root = ['/peri/', '/face/']
         path_lst = []
-        data_loaders = []
         acc_face_gal = []
         acc_peri_gal = []    
 
@@ -143,39 +115,36 @@ def main_intermodal_id(model, root_pth=config.evaluation['identification'], face
         if datasets == 'ethnic':
             ethnic_face_gal_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/face/'), 'test', 'face', aug='False')
             ethnic_peri_pr_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/peri/'), 'test', 'periocular', aug='False')
-            _, acc_face_gal = intermodal_id(model, ethnic_face_gal_load, ethnic_peri_pr_load, device = device, face_model = face_model, peri_model = peri_model, gallery = 'face')
+            _, inter_face_gal_acc_ethnic = intermodal_id(model, ethnic_face_gal_load, ethnic_peri_pr_load, device=device, face_model=face_model, peri_model=peri_model, gallery='face')
+            inter_face_gal_acc_ethnic = np.around(inter_face_gal_acc_ethnic, 4)
+            acc_face_gal.append(inter_face_gal_acc_ethnic)
 
             ethnic_peri_gal_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/peri/'), 'test', 'periocular', aug='False')
             ethnic_face_pr_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/face/'), 'test', 'face', aug='False')
-            _, acc_peri_gal = intermodal_id(model, ethnic_face_pr_load, ethnic_peri_gal_load, device = device, face_model = face_model, peri_model = peri_model, gallery = 'peri')
+            _, inter_peri_gal_acc_ethnic = intermodal_id(model, ethnic_face_pr_load, ethnic_peri_gal_load, device=device, face_model=face_model, peri_model=peri_model, gallery='peri')
+            inter_peri_gal_acc_ethnic = np.around(inter_peri_gal_acc_ethnic, 4)
+            acc_peri_gal.append(inter_peri_gal_acc_ethnic)
+
         else:
             # data loader and datasets
             for directs in glob.glob(root_drt):
-                base_nm = directs.split('\\')[-1]
                 if not directs.split('/')[-1] == 'gallery':
                     path_lst.append(directs)
                 else:
                     gallery_path = directs      
 
-            # split data loaders into folds
-            fold = 0
-            kf = KFold(n_splits=len(path_lst))
             for probes in path_lst:
-                fold += 1
-                # print(path_lst[int(probes[i])] + modal_root[0], path_lst[int(gallery)] + modal_root[1])
                 peri_probe_load, peri_dataset = data_loader.gen_data((probes + modal_root[0]), 'test', 'periocular', aug='False')
                 face_gal_load, face_dataset = data_loader.gen_data((gallery_path + modal_root[1]), 'test', 'face', aug='False')
-                _, cm_face_gal_acc = intermodal_id(model, face_gal_load, peri_probe_load, device = device, face_model = face_model, peri_model = peri_model, gallery = 'face')
-                cm_face_gal_acc = np.around(cm_face_gal_acc, 4)
-                acc_face_gal.append(cm_face_gal_acc)
+                _, inter_face_gal_acc = intermodal_id(model, face_gal_load, peri_probe_load, device=device, face_model=face_model, peri_model=peri_model, gallery='face')
+                inter_face_gal_acc = np.around(inter_face_gal_acc, 4)
+                acc_face_gal.append(inter_face_gal_acc)
 
                 peri_gal_load, peri_dataset = data_loader.gen_data((gallery_path + modal_root[0]), 'test', 'periocular', aug='False')
                 face_probe_load, face_dataset = data_loader.gen_data((probes + modal_root[1]), 'test', 'face', aug='False')
-                _, cm_peri_gal_acc = intermodal_id(model, face_probe_load, peri_gal_load, device = device, face_model = face_model, peri_model = peri_model, gallery = 'peri')
-                cm_peri_gal_acc = np.around(cm_peri_gal_acc, 4)
-                acc_peri_gal.append(cm_peri_gal_acc)
-                #     print(i, cm_test_acc)
-                # print("Fold:", fold)
+                _, inter_peri_gal_acc = intermodal_id(model, face_probe_load, peri_gal_load, device=device, face_model=face_model, peri_model=peri_model, gallery='peri')
+                inter_peri_gal_acc = np.around(inter_peri_gal_acc, 4)
+                acc_peri_gal.append(inter_peri_gal_acc)
 
         # *** ***
 
@@ -190,7 +159,7 @@ def main_intermodal_id(model, root_pth=config.evaluation['identification'], face
 
 
 # Intra-Modal Identification Function
-def intramodal_id(model, loader_gallery, loader_test, device = 'cuda:0', peri_flag = False):
+def intramodal_id(model, loader_gallery, loader_test, device='cuda:0', peri_flag=False):
     
     # ***** *****
     
@@ -201,14 +170,14 @@ def intramodal_id(model, loader_gallery, loader_test, device = 'cuda:0', peri_fl
     
     # Extract gallery features w.r.t. pre-learned model
     gallery_fea = torch.tensor([])
-    gallery_label = torch.tensor([], dtype = torch.int64)
+    gallery_label = torch.tensor([], dtype=torch.int64)
     
     with torch.no_grad():
         
         for batch_idx, (x, y) in enumerate(loader_gallery):
 
             x = x.to(device)
-            x, _ = model(x.unsqueeze(1), peri_flag = peri_flag)
+            x = model(x, peri_flag=peri_flag)
 
             gallery_fea = torch.cat((gallery_fea, x.detach().cpu()), 0)
             gallery_label = torch.cat((gallery_label, y))
@@ -226,14 +195,14 @@ def intramodal_id(model, loader_gallery, loader_test, device = 'cuda:0', peri_fl
     
     # Extract test features w.r.t. pre-learned model
     test_fea = torch.tensor([])
-    test_label = torch.tensor([], dtype = torch.int64)
+    test_label = torch.tensor([], dtype=torch.int64)
     
     with torch.no_grad():
         
         for batch_idx, (x, y) in enumerate(loader_test):
 
             x = x.to(device)
-            x, _ = model(x.unsqueeze(1), peri_flag = peri_flag)
+            x = model(x, peri_flag=peri_flag)
 
             test_fea = torch.cat((test_fea, x.detach().cpu()), 0)
             test_label = torch.cat((test_label, y))
@@ -273,7 +242,7 @@ def intramodal_id(model, loader_gallery, loader_test, device = 'cuda:0', peri_fl
 
 
 # Inter-Modal Identification Function
-def intermodal_id(model, face_loader, peri_loader, device = 'cuda:0', face_model = None, peri_model = None, gallery = 'face'):
+def intermodal_id(model, face_loader, peri_loader, device='cuda:0', face_model=None, peri_model=None, gallery='face'):
     
     # ***** *****
     
@@ -284,7 +253,7 @@ def intermodal_id(model, face_loader, peri_loader, device = 'cuda:0', face_model
 
     # Extract face features w.r.t. pre-learned model
     face_fea = torch.tensor([])
-    face_label = torch.tensor([], dtype = torch.int64)
+    face_label = torch.tensor([], dtype=torch.int64)
     
     with torch.no_grad():
         
@@ -293,9 +262,9 @@ def intermodal_id(model, face_loader, peri_loader, device = 'cuda:0', face_model
             x = x.to(device)
             if not face_model is None:
                 face_model = face_model.eval().to(device)
-                x, _ = face_model(x.unsqueeze(1), peri_flag = False)
+                x = face_model(x, peri_flag=False)
             else:
-                x, _ = model(x.unsqueeze(1), peri_flag=False)
+                x = model(x, peri_flag=False)
 
             face_fea = torch.cat((face_fea, x.detach().cpu()), 0)
             face_label = torch.cat((face_label, y))
@@ -313,7 +282,7 @@ def intermodal_id(model, face_loader, peri_loader, device = 'cuda:0', face_model
     
     # Extract periocular features w.r.t. pre-learned model
     peri_fea = torch.tensor([])
-    peri_label = torch.tensor([], dtype = torch.int64)
+    peri_label = torch.tensor([], dtype=torch.int64)
     
     with torch.no_grad():
         
@@ -322,9 +291,9 @@ def intermodal_id(model, face_loader, peri_loader, device = 'cuda:0', face_model
             x = x.to(device)
             if not peri_model is None:
                 peri_model = peri_model.eval().to(device)
-                x, _ = peri_model(x.unsqueeze(1), peri_flag=True)
+                x = peri_model(x, peri_flag=True)
             else:
-                x, _ = model(x.unsqueeze(1), peri_flag=True)
+                x = model(x, peri_flag=True)
 
             peri_fea = torch.cat((peri_fea, x.detach().cpu()), 0)
             peri_label = torch.cat((peri_label, y))
@@ -365,9 +334,6 @@ def intermodal_id(model, face_loader, peri_loader, device = 'cuda:0', face_model
     probe_pred = np.argmax(probe_dist, 0)
     probe_pred = gal_label[probe_pred]
     probe_acc = sum(probe_label == probe_pred) / probe_label.shape[0]
-
-    # torch.cuda.empty_cache()
-    # time.sleep(0.0001)
     
     del model
     time.sleep(0.0001)
@@ -375,8 +341,35 @@ def intermodal_id(model, face_loader, peri_loader, device = 'cuda:0', face_model
     return gal_acc, probe_acc
 
 
-# CMC Extractor Function
-def calculate_cmc(gallery_embedding, probe_embedding, gallery_label, probe_label, last_rank=10):
+def feature_extractor(model, data_loader, device='cuda:0', peri_flag=False):    
+    emb = torch.tensor([])
+    lbl = torch.tensor([], dtype=torch.int64)
+
+    model = model.eval().to(device)
+    
+    with torch.no_grad():        
+        for batch_idx, (x, y) in enumerate(data_loader):
+            x = x.to(device)
+            x = model(x, peri_flag=peri_flag)
+
+            emb = torch.cat((emb, x.detach().cpu()), 0)
+            lbl = torch.cat((lbl, y))
+            
+            del x, y
+            time.sleep(0.0001)
+
+    # print('Set Capacity\t: ', emb.size())
+    assert(emb.size()[0] == lbl.size()[0])
+    
+    del data_loader
+    time.sleep(0.0001)
+
+    del model
+    
+    return emb, lbl
+
+
+def calculate_cmc(gallery_embedding, probe_embedding, gallery_label, probe_label, last_rank=1):
     """
     :param gallery_embedding: [num of gallery images x embedding size] (n x e) torch float tensor
     :param probe_embedding: [num of probe images x embedding size] (m x e) torch float tensor
@@ -410,13 +403,10 @@ def calculate_cmc(gallery_embedding, probe_embedding, gallery_label, probe_label
     if cmc.device.type == 'cuda':
         cmc = cmc.cpu()
 
-    x_range = np.arange(0,last_rank)+1
-
-    return x_range, cmc.numpy()
+    return cmc.numpy()
 
 
-# Intra-Modal CMC Extractor Main
-def intra_cmc_extractor(model, root_pth='./data/', modal='periocular', peri_flag = True, device = 'cuda:0', rank=10):
+def intra_cmc_extractor(model, root_pth='./data/', modal='periocular', peri_flag=True, device='cuda:0', rank=1):
     total_cmc = np.empty((0, rank), int) 
     for datasets in dset_list:
         cmc_lst = np.empty((0, rank), int)
@@ -443,17 +433,17 @@ def intra_cmc_extractor(model, root_pth='./data/', modal='periocular', peri_flag
         if datasets == 'ethnic':
             ethnic_gal_data_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/' + modal[:4] + '/'), 'test', type=modal, aug='False')
             ethnic_pr_data_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/' + modal[:4] + '/'), 'test', type=modal, aug='False')
-            ethnic_fea_gal, ethnic_lbl_gal = feature_extractor(model, ethnic_gal_data_load, device = device, peri_flag = peri_flag)
-            ethnic_fea_pr, ethnic_lbl_pr = feature_extractor(model, ethnic_pr_data_load, device = device, peri_flag = peri_flag)            
+            ethnic_fea_gal, ethnic_lbl_gal = feature_extractor(model, ethnic_gal_data_load, device=device, peri_flag=peri_flag)
+            ethnic_fea_pr, ethnic_lbl_pr = feature_extractor(model, ethnic_pr_data_load, device=device, peri_flag=peri_flag)            
             ethnic_lbl_pr, ethnic_lbl_gal = F.one_hot(ethnic_lbl_pr), F.one_hot(ethnic_lbl_gal)
-            rng, cmc = calculate_cmc(ethnic_fea_gal, ethnic_fea_pr, ethnic_lbl_gal, ethnic_lbl_pr, last_rank=rank)
+            cmc = calculate_cmc(ethnic_fea_gal, ethnic_fea_pr, ethnic_lbl_gal, ethnic_lbl_pr, last_rank=rank)
 
         else:           
             for i in range(len(probe_data_loaders)):
-                peri_fea_gal, peri_lbl_gal = feature_extractor(model, gallery_data_loaders, device = device, peri_flag = peri_flag)
-                peri_fea_pr, peri_lbl_pr = feature_extractor(model, probe_data_loaders[i], device = device, peri_flag = peri_flag)
+                peri_fea_gal, peri_lbl_gal = feature_extractor(model, gallery_data_loaders, device=device, peri_flag=peri_flag)
+                peri_fea_pr, peri_lbl_pr = feature_extractor(model, probe_data_loaders[i], device=device, peri_flag=peri_flag)
                 peri_lbl_pr, peri_lbl_gal = F.one_hot(peri_lbl_pr), F.one_hot(peri_lbl_gal)
-                rng, cmc = calculate_cmc(peri_fea_gal, peri_fea_pr, peri_lbl_gal, peri_lbl_pr, last_rank=rank)
+                cmc = calculate_cmc(peri_fea_gal, peri_fea_pr, peri_lbl_gal, peri_lbl_pr, last_rank=rank)
                 cmc_lst = np.append(cmc_lst, np.array([cmc]), axis=0)                
             cmc = np.mean(cmc_lst, axis=0)
 
@@ -463,13 +453,12 @@ def intra_cmc_extractor(model, root_pth='./data/', modal='periocular', peri_flag
 
     for ds in intra_cmc_dict:
         total_cmc = np.append(total_cmc, np.array([intra_cmc_dict[ds]]), axis=0)
-    intra_cmc_avg_dict['avg'] = np.mean(total_cmc, axis = 0)
+    intra_cmc_avg_dict['avg'] = np.mean(total_cmc, axis=0)
 
-    return intra_cmc_dict, intra_cmc_avg_dict, rng
+    return intra_cmc_dict, intra_cmc_avg_dict
 
 
-# Inter-Modal CMC Extractor Main
-def inter_cmc_extractor(model, root_pth='./data/', facenet = None, perinet = None, device = 'cuda:0', rank=10):
+def inter_cmc_extractor(model, root_pth='./data/', facenet=None, perinet=None, device='cuda:0', rank=1):
     if facenet is None and perinet is None:
         facenet = model
         perinet = model
@@ -504,34 +493,34 @@ def inter_cmc_extractor(model, root_pth='./data/', facenet = None, perinet = Non
         if datasets == 'ethnic':
             p_ethnic_gal_data_load, p_ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/peri/'), 'test', type='periocular', aug='False')
             p_ethnic_pr_data_load, p_ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/peri/'), 'test', type='periocular', aug='False')
-            p_ethnic_fea_gal, p_ethnic_lbl_gal = feature_extractor(perinet, p_ethnic_gal_data_load, device = device, peri_flag = True)
-            p_ethnic_fea_pr, p_ethnic_lbl_pr = feature_extractor(perinet, p_ethnic_pr_data_load, device = device, peri_flag = True)            
+            p_ethnic_fea_gal, p_ethnic_lbl_gal = feature_extractor(perinet, p_ethnic_gal_data_load, device=device, peri_flag=True)
+            p_ethnic_fea_pr, p_ethnic_lbl_pr = feature_extractor(perinet, p_ethnic_pr_data_load, device=device, peri_flag=True)            
             p_ethnic_lbl_pr, p_ethnic_lbl_gal = F.one_hot(p_ethnic_lbl_pr), F.one_hot(p_ethnic_lbl_gal)
 
             f_ethnic_gal_data_load, f_ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/face/'), 'test', type='face', aug='False')
             f_ethnic_pr_data_load, f_ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/face/'), 'test', type='face', aug='False')
-            f_ethnic_fea_gal, f_ethnic_lbl_gal = feature_extractor(facenet, f_ethnic_gal_data_load, device = device, peri_flag = False)
-            f_ethnic_fea_pr, f_ethnic_lbl_pr = feature_extractor(facenet, f_ethnic_pr_data_load, device = device, peri_flag = False)            
+            f_ethnic_fea_gal, f_ethnic_lbl_gal = feature_extractor(facenet, f_ethnic_gal_data_load, device=device, peri_flag=False)
+            f_ethnic_fea_pr, f_ethnic_lbl_pr = feature_extractor(facenet, f_ethnic_pr_data_load, device=device, peri_flag=False)            
             f_ethnic_lbl_pr, f_ethnic_lbl_gal = F.one_hot(f_ethnic_lbl_pr), F.one_hot(f_ethnic_lbl_gal)
 
-            rng_f, cmc_f = calculate_cmc(f_ethnic_fea_gal, p_ethnic_fea_pr, f_ethnic_lbl_gal, p_ethnic_lbl_pr, last_rank=rank)
-            rng_p, cmc_p = calculate_cmc(p_ethnic_fea_gal, f_ethnic_fea_pr, p_ethnic_lbl_gal, f_ethnic_lbl_pr, last_rank=rank)
+            cmc_f = calculate_cmc(f_ethnic_fea_gal, p_ethnic_fea_pr, f_ethnic_lbl_gal, p_ethnic_lbl_pr, last_rank=rank)
+            cmc_p = calculate_cmc(p_ethnic_fea_gal, f_ethnic_fea_pr, p_ethnic_lbl_gal, f_ethnic_lbl_pr, last_rank=rank)
 
         else:            
             for probes in peri_data_loaders:                
-                face_fea_gal, face_lbl_gal = feature_extractor(perinet, face_data_load_gal, device = device, peri_flag = False)
-                peri_fea_pr, peri_lbl_pr = feature_extractor(perinet, probes, device = device, peri_flag = True)
+                face_fea_gal, face_lbl_gal = feature_extractor(facenet, face_data_load_gal, device=device, peri_flag=False)
+                peri_fea_pr, peri_lbl_pr = feature_extractor(perinet, probes, device=device, peri_flag=True)
                 peri_lbl_pr, face_lbl_gal = F.one_hot(peri_lbl_pr), F.one_hot(face_lbl_gal)
 
-                rng_f, cmc_f = calculate_cmc(face_fea_gal, peri_fea_pr, face_lbl_gal, peri_lbl_pr, last_rank=rank)
+                cmc_f = calculate_cmc(face_fea_gal, peri_fea_pr, face_lbl_gal, peri_lbl_pr, last_rank=rank)
                 cmc_lst_f = np.append(cmc_lst_f, np.array([cmc_f]), axis=0)
 
             for probes in face_data_loaders:                
-                peri_fea_gal, peri_lbl_gal = feature_extractor(perinet, peri_data_load_gal, device = device, peri_flag = True)
-                face_fea_pr, face_lbl_pr = feature_extractor(perinet, probes, device = device, peri_flag = False)
+                peri_fea_gal, peri_lbl_gal = feature_extractor(perinet, peri_data_load_gal, device=device, peri_flag=True)
+                face_fea_pr, face_lbl_pr = feature_extractor(facenet, probes, device=device, peri_flag=False)
                 face_lbl_pr, peri_lbl_gal = F.one_hot(face_lbl_pr), F.one_hot(peri_lbl_gal)
 
-                rng_p, cmc_p = calculate_cmc(peri_fea_gal, face_fea_pr, peri_lbl_gal, face_lbl_pr, last_rank=rank)
+                cmc_p = calculate_cmc(peri_fea_gal, face_fea_pr, peri_lbl_gal, face_lbl_pr, last_rank=rank)
                 cmc_lst_p = np.append(cmc_lst_p, np.array([cmc_p]), axis=0)
                 
             cmc_f = np.mean(cmc_lst_f, axis=0)
@@ -545,77 +534,53 @@ def inter_cmc_extractor(model, root_pth='./data/', facenet = None, perinet = Non
 
     for ds in inter_cmc_dict_f:
         total_cmc_f = np.append(total_cmc_f, np.array([inter_cmc_dict_f[ds]]), axis=0)
-    inter_cmc_avg_dict_f['avg'] = np.mean(total_cmc_f, axis = 0)
+    inter_cmc_avg_dict_f['avg'] = np.mean(total_cmc_f, axis=0)
 
     for ds in inter_cmc_dict_p:
         total_cmc_p = np.append(total_cmc_p, np.array([inter_cmc_dict_p[ds]]), axis=0)
-    inter_cmc_avg_dict_p['avg'] = np.mean(total_cmc_p, axis = 0)
+    inter_cmc_avg_dict_p['avg'] = np.mean(total_cmc_p, axis=0)
 
     return inter_cmc_dict_f, inter_cmc_avg_dict_f, inter_cmc_dict_p, inter_cmc_avg_dict_p
 
 
 if __name__ == '__main__':
-    method = 'ha_vit'
-    rank = 10
-    rng = np.arange(0, rank)+1
+    method = 'gc2sa_net'
+    rank = 10  # CMC - rank > 1 (graph) or identification - rank = 1 (values)
+    if rank > 1:
+        create_folder(method)
     create_folder(method)
     embd_dim = 1024
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    load_model_path = './models/sota/HA-ViT.pth'
-    model = net.HA_ViT(img_size=112, patch_size=8, in_chans=3, embed_dim=1024, num_classes_list=(1054,),
-                   layer_depth=3, num_heads=8, mlp_ratio=4., norm_layer=None, drop_rate=0.0, attn_drop_rate=0.0,
-                   drop_path_rate=0.)
-    model = load_model.load_pretrained_network(model, load_model_path, device = device)
+    load_model_path = './models/best_model/GC2SA-Net.pth'
+    model = net.GC2SA_Net(embedding_size=embd_dim).eval().to(device)
+    model = load_model.load_pretrained_network(model, load_model_path, device=device)
 
-    #### Identification
-    peri_id_dict = main_intramodal_id(model, root_pth=config.evaluation['identification'], modal = 'periocular', peri_flag = True, device = device)
-    peri_id_dict = get_avg(peri_id_dict)
-    peri_id_dict = copy.deepcopy(peri_id_dict)
-    print('Average (Periocular):', peri_id_dict['avg'])
-    print('Intra-Modal (Periocular):', peri_id_dict)    
-
-    face_id_dict = main_intramodal_id(model, root_pth = config.evaluation['identification'], modal = 'face', peri_flag = False, device = device)
-    face_id_dict = get_avg(face_id_dict)
-    face_id_dict = copy.deepcopy(face_id_dict)
-    print('Average (Face):', face_id_dict['avg'])
-    print('Intra-Modal (Face):', face_id_dict)    
-
-    inter_id_dict_f, inter_id_dict_p = main_intermodal_id(model, root_pth = config.evaluation['identification'], face_model = None, peri_model = None, device = device)
-    inter_id_dict_p, inter_id_dict_f = get_avg(inter_id_dict_p), get_avg(inter_id_dict_f)
-    inter_id_dict_p = copy.deepcopy(inter_id_dict_p)
-    inter_id_dict_f = copy.deepcopy(inter_id_dict_f)
-    print('Average (Periocular-Face):', inter_id_dict_p['avg'], inter_id_dict_f['avg'])    
-    print('Inter-Modal (Periocular Gallery, Face Gallery):', inter_id_dict_p, inter_id_dict_f)    
-
-    #### CMC
-    peri_cmc_dict, peri_avg_dict, peri_rng = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='periocular', peri_flag = True, device = device, rank=rank)
+    #### Compute CMC Values
+    peri_cmc_dict, peri_avg_dict = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='periocular', peri_flag=True, device=device, rank=rank)
     peri_cmc_dict = copy.deepcopy(peri_cmc_dict)
     peri_avg_dict = copy.deepcopy(peri_avg_dict)    
     torch.save(peri_cmc_dict, './data/cmc/' + str(method) + '/intra_peri/peri_cmc_dict.pt')
     torch.save(peri_avg_dict, './data/cmc/' + str(method) + '/intra_peri/peri_avg_dict.pt')
-    print('Average (Periocular): \n', peri_avg_dict) 
     print('Intra-Modal (Periocular): \n', peri_cmc_dict)
-    
+    print('Average (Periocular): \n', peri_avg_dict, '±', peri_avg_dict['std'])   
 
-    face_cmc_dict, face_avg_dict, face_rng = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='face', peri_flag = False, device = device, rank=rank)
+    face_cmc_dict, face_avg_dict = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='face', peri_flag=False, device=device, rank=rank)
     face_cmc_dict = copy.deepcopy(face_cmc_dict)
     face_avg_dict = copy.deepcopy(face_avg_dict)       
     torch.save(face_cmc_dict, './data/cmc/' + str(method) + '/intra_face/face_cmc_dict.pt') 
     torch.save(face_avg_dict, './data/cmc/' + str(method) + '/intra_face/face_avg_dict.pt')
-    print('Average (Face): \n', face_avg_dict) 
-    print('Intra-Modal (Face): \n', face_cmc_dict)     
+    print('Intra-Modal (Face): \n', face_cmc_dict)    
+    print('Average (Face): \n', face_avg_dict, '±', face_avg_dict['std'])     
 
-    inter_cmc_dict_f, inter_avg_dict_f, inter_cmc_dict_p, inter_avg_dict_p = inter_cmc_extractor(model, facenet = None, perinet = None, root_pth=config.evaluation['identification'], device = device, rank=rank)
+    inter_cmc_dict_f, inter_avg_dict_f, inter_cmc_dict_p, inter_avg_dict_p = inter_cmc_extractor(model, facenet=None, perinet=None, root_pth=config.evaluation['identification'], device=device, rank=rank)
     inter_cmc_dict_f = copy.deepcopy(inter_cmc_dict_f)
     inter_avg_dict_f = copy.deepcopy(inter_avg_dict_f)
     inter_cmc_dict_p = copy.deepcopy(inter_cmc_dict_p)
     inter_avg_dict_p = copy.deepcopy(inter_avg_dict_p)
-    torch.save(inter_cmc_dict_f, './data/cmc/' + str(method) + '/inter_peri-face/inter_cmc_dict_f.pt')
-    torch.save(inter_avg_dict_f, './data/cmc/' + str(method) + '/inter_peri-face/inter_avg_dict_f.pt')
-    torch.save(inter_cmc_dict_p, './data/cmc/' + str(method) + '/inter_peri-face/inter_cmc_dict_p.pt')
-    torch.save(inter_avg_dict_p, './data/cmc/' + str(method) + '/inter_peri-face/inter_avg_dict_p.pt')
-    print('Average (Periocular-Face): \n', inter_avg_dict_p, inter_avg_dict_f)
-    print('Inter-Modal (Periocular-Face): \n', inter_cmc_dict_f, inter_cmc_dict_p)    
-
-    
+    torch.save(inter_cmc_dict_f, './data/cmc/' + str(method) + '/inter_peri-face/cm_cmc_dict_f.pt')
+    torch.save(inter_avg_dict_f, './data/cmc/' + str(method) + '/inter_peri-face/cm_avg_dict_f.pt')
+    torch.save(inter_cmc_dict_p, './data/cmc/' + str(method) + '/inter_peri-face/cm_cmc_dict_p.pt')
+    torch.save(inter_avg_dict_p, './data/cmc/' + str(method) + '/inter_peri-face/cm_avg_dict_p.pt')
+    print('Inter-Modal (Periocular-Face): \n', inter_cmc_dict_p, inter_cmc_dict_f)   
+    print('Average (Periocular-Face): \n', inter_avg_dict_p, '±', inter_avg_dict_p['std'], inter_avg_dict_f, '±', inter_avg_dict_f['std'])     

@@ -44,7 +44,7 @@ class Linear_block(Module):
         return x
 
 class Depth_Wise(Module):
-     def __init__(self, in_c, out_c, residual = False, kernel=(3, 3), stride=(2, 2), padding=(1, 1), groups=1):
+     def __init__(self, in_c, out_c, residual=False, kernel=(3, 3), stride=(2, 2), padding=(1, 1), groups=1):
         super(Depth_Wise, self).__init__()
         self.conv = Conv_block(in_c, out_c=groups, kernel=(1, 1), padding=(0, 0), stride=(1, 1))
         self.conv_dw = Conv_block(groups, groups, groups=groups, kernel=kernel, padding=padding, stride=stride)
@@ -149,7 +149,7 @@ class GC2SA_Net(Module):
         self.encoder_ori = GC2SA_Block(channels=128, num_heads=8, expansion_factor=2.66)
 
     
-    def forward(self, x, peri_flag = False):
+    def forward(self, x, peri_flag=False):
         out = self.conv1(x)
         out = self.conv2_dw(out)
         out = self.encoder_64_1(out) # block 1 (low level)
@@ -176,5 +176,5 @@ if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
 
     load_model_path = './models/best_model/GC2SA-Net.pth'
-    model = GC2SA_Net(embedding_size = embd_dim).eval().to(device)
-    model = load_model.load_pretrained_network(model, load_model_path, device = device)
+    model = GC2SA_Net(embedding_size=embd_dim).eval().to(device)
+    model = load_model.load_pretrained_network(model, load_model_path, device=device)

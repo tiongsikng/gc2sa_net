@@ -111,10 +111,10 @@ class MACL(nn.Module):
             horizontal_intra = torch.Tensor(()).to(self.device)
             horizontal_inter = torch.Tensor(()).to(self.device)
             for i in static_index_list:
-                horizontal_pos = torch.cat((horizontal_pos, positive_dict[i]), dim = 0)
-                horizontal_neg = torch.cat((horizontal_neg, negative_dict[i]), dim = 0)
-                horizontal_intra = torch.cat((horizontal_intra, intra_aug_dict[i]), dim = 0)
-                horizontal_inter = torch.cat((horizontal_inter, inter_aug_dict[i]), dim = 0)
+                horizontal_pos = torch.cat((horizontal_pos, positive_dict[i]), dim=0)
+                horizontal_neg = torch.cat((horizontal_neg, negative_dict[i]), dim=0)
+                horizontal_intra = torch.cat((horizontal_intra, intra_aug_dict[i]), dim=0)
+                horizontal_inter = torch.cat((horizontal_inter, inter_aug_dict[i]), dim=0)
             if rows == 0:
                 pos_mask = horizontal_pos
                 neg_mask = horizontal_neg
@@ -223,7 +223,7 @@ class CrossEntropy(nn.Module):
 
 class CosFace(nn.Module):
     
-    def __init__(self, in_features, out_features, s = 30.0, m = 0.40):
+    def __init__(self, in_features, out_features, s=30.0, m=0.40):
         
         super(CosFace, self).__init__()
         self.in_features = in_features
@@ -233,7 +233,7 @@ class CosFace(nn.Module):
         self.weight = Parameter(torch.Tensor(out_features, in_features))
         self.reset_parameters()
     
-    def forward(self, input, label = None):
+    def forward(self, input, label=None):
         
         # cosine = self.cosine_sim(input, self.weight).clamp(-1,1)
         cosine = F.linear(F.normalize(input), F.normalize(self.weight)).clamp(-1,1)
@@ -242,7 +242,7 @@ class CosFace(nn.Module):
         # https://discuss.pytorch.org/t/convert-int-into-one-hot-format/507
         one_hot = torch.zeros_like(cosine)
         one_hot.scatter_(1, label.view(-1, 1), 1.0)
-        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
+        # -------------torch.where(out_i={x_i if condition_i else y_i) -------------
         output = self.s * (cosine - one_hot * self.m)
         
         return output# , F.normalize(self.weight, p=2, dim=1), (cosine * one_hot)
@@ -275,7 +275,7 @@ class CosFace(nn.Module):
 
 class ArcFace(nn.Module):
 
-    def __init__(self, in_features, out_features, s=30.0, m=0.50, easy_margin=False, device = 'cuda:0'):
+    def __init__(self, in_features, out_features, s=30.0, m=0.50, easy_margin=False, device='cuda:0'):
         
         super(ArcFace, self).__init__()
         self.in_features = in_features
@@ -316,7 +316,7 @@ class ArcFace(nn.Module):
         one_hot = torch.zeros(cosine.size()).to(self.device)
         one_hot.scatter_(1, label.view(-1, 1).long(), 1)
         
-        # -------------torch.where(out_i = {x_i if condition_i else y_i) -------------
+        # -------------torch.where(out_i={x_i if condition_i else y_i) -------------
         output = (one_hot * phi) + ((1.0 - one_hot) * cosine)  # you can use torch.where if your torch.__version__ is 0.4
         output *= self.s
         
@@ -368,18 +368,18 @@ class FunctionNegativeTripletSelector(TripletSelector):
     and return a negative index for that pair
     """
 
-    def __init__(self, margin, negative_selection_fn, cpu = True):        
+    def __init__(self, margin, negative_selection_fn, cpu=True):        
         super(FunctionNegativeTripletSelector, self).__init__()
         self.cpu = cpu
         self.margin = margin
         self.negative_selection_fn = negative_selection_fn
 
-    def get_triplets(self, embeddings, labels, label_min = 0, k = 1):
+    def get_triplets(self, embeddings, labels, label_min=0, k=1):
         
         if self.cpu:
             embeddings = embeddings.cpu()
         
-        distance_matrix = 1 - torch.clamp(torch.mm(embeddings, embeddings.t()), min = -1.0, max = 1.0)
+        distance_matrix = 1 - torch.clamp(torch.mm(embeddings, embeddings.t()), min=-1.0, max=1.0)
         distance_matrix = distance_matrix.cpu()
         
         labels = labels.cpu().data.numpy()
@@ -436,19 +436,19 @@ class OnlineTripletLoss(nn.Module):
                 tl_ap_flag = False
                 if net_params['tl_id'] < 0:
                     tl_ap_flag = True
-                loss_cmb, ap, an = loss_fn['loss_cmb'](torch.cat((face_emb, peri_emb), dim = 0), \
+                loss_cmb, ap, an = loss_fn['loss_cmb'](torch.cat((face_emb, peri_emb), dim=0), \
                                                 torch.cat((face_lbl, face_lbl)), \                                                
                                                 tl_min, tl_k, tl_ap_flag)
     '''
 
-    def __init__(self, margin = 0.7, ap_weight = 0.0, triplet_selector = None, device = 'cuda:0'):
+    def __init__(self, margin=0.7, ap_weight=0.0, triplet_selector=None, device='cuda:0'):
         super(OnlineTripletLoss, self).__init__()
         self.margin = margin
         self.ap_weight = ap_weight
         self.triplet_selector = triplet_selector
         self.device = device
         
-    def forward(self, embeddings, target, target_min = 0, k = 1, ap_flag = False):        
+    def forward(self, embeddings, target, target_min=0, k=1, ap_flag=False):        
         triplets = self.triplet_selector.get_triplets(embeddings, target, target_min, k)
         
         triplets = triplets.to(self.device)
@@ -488,7 +488,7 @@ class CrossModalCenterLoss(nn.Module):
         num_classes (int): number of classes.
         feat_dim (int): feature dimension.
     """
-    def __init__(self, num_classes, feat_dim=512, use_gpu=True, device = 'cuda:0'):
+    def __init__(self, num_classes, feat_dim=512, use_gpu=True, device='cuda:0'):
         super(CrossModalCenterLoss, self).__init__()
         self.num_classes = num_classes
         self.feat_dim = feat_dim

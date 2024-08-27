@@ -15,13 +15,11 @@ The project directories are as follows:
     * _CMC and ROC data dictionaries are generated in this directory._
     * data_loader.py - Generate training and testing PyTorch dataloader. Adjust the augmentations etc. in this file. Batch size of data is also determined here, based on the values set in `params.py`.
 - eval: Evaluation metrics (identification and verification). Also contains CMC and ROC evaluations.
-    * cmc_eval.py - Evaluates and generates Cumulative Matching Characteristic (CMC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate CMC curves.
+    * cmc_eval_identification.py - Evaluates Rank-1 Identification Rate (IR) and generates Cumulative Matching Characteristic (CMC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate CMC curves.
     * grad_cam.py - Plot GradCAM images. For usage, store all images in a single folder, and change the path accordingly. More details of usage in the file's main function.
-    * identification.py - Evaluates Rank-1 Identification Rate (IR).
     * plot_cmc_roc_sota.ipynb - Notebook to plot CMC and ROC curves side-by-side, based on generated `.pt` files from `cmc_eval.py` and `roc_eval.py`. Graph is generated in `graphs` directory.
     * plot_tSNE.ipynb - Notebook to plot t-SNE images based on the 10 identities of periocular-face toy examples. Example of text file (which correlates to the image paths) are in `data/tsne/img_lists`.
-    * roc_eval.py - Evaluates and generates Receiver Operating Characteristic (ROC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate ROC curves.
-    * verification.py - Evaluates Verification Equal Error Rate (EER).
+    * roc_eval_verification.py - Evaluates Verification Equal Error Rate (EER) and generates Receiver Operating Characteristic (ROC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate ROC curves.
 - graphs: Directory where graphs are generated.
     * _CMC and ROC curve file is generated in this directory._
 - logs: Directory where logs are generated.
@@ -31,7 +29,6 @@ The project directories are as follows:
     * _Trained models will also be stored in this directory._
 - network: Contains loss functions and network related files.
     * `facexzoo_network` - Directory contains architecture files from [FaceXZoo](https://github.com/JDAI-CV/FaceX-Zoo/tree/main/training_mode) repository on GitHub. All pre-trained weights are fairly trained. The weight files can be downloaded from the repository, or [here](https://www.dropbox.com/scl/fo/rnmj0n572gmfkshfplk6u/h?rlkey=lze6kbg2q0mcdrimz5qlkdjqw&dl=0).
-    * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely PF-GLSR, CMB-Net, and HA-ViT (see table below). _Since HA-ViT has its own data loader and has a slightly different setting, the `HA_ViT` directory contains its own data loader and evaluation (identification+CMC and verification+ROC) files for simplicity._
     * flops_counter.py - Counter for Floating Point Operations (FLOPs) and number of parameters for architectures. They are stored in the files `macs_dict.pt` and `params_dict.pt`
     * gc2sa_net.py - Architecture file for GC<sup>2</sup>SA-Net.
     * load_model.py - Loads pre-trained weights based on a given model.
@@ -54,10 +51,8 @@ Download dataset (training and testing) from [this link](https://www.dropbox.com
 0. Pre-trained models for fine-tuning or testing can be downloaded from [this link](https://www.dropbox.com/s/g8gn4x4wp0svyx5/pretrained_models.zip?dl=0). Password is _conditional\_biometrics_.
 1. Based on the (pre-)trained models in the `models(/pretrained)` directory, load the correct model and the architecture (in `network` directory) using `load_model.py` file. Change the file accordingly in case of different layer names, etc.
 2. Evaluation:
-    * Cumulative Matching Characteristic (CMC) curve: Run `cmc_eval.py`. Based on the generated `.pt` files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate CMC graph.
-    * Identification: Run `identification.py`. Only Rank-1 IR values will be displayed.
-    * Receiver Operating Characteristic (ROC) curve: Run `roc_eval.py`. Based on the generated `.pt` files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate ROC graph.
-    * Verification: Run `verification.py`. Only EER values will be displayed.
+    * Identification / Cumulative Matching Characteristic (CMC) curve: Run `cmc_eval_identification.py`. Based on the generated `.pt` files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate CMC graph.
+    * Verification / Receiver Operating Characteristic (ROC) curve: Run `roc_eval_verification.py`. Based on the generated `.pt` files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate ROC graph.
 3. Visualization:
     * Gradient-weighted Class Activation Mapping (Grad-CAM): Run `grad_cam.py`, based on the selected images that are stored in a directory. The images will be generated in the `graphs` directory.
     * t-distributed stochastic neighbor embedding (t-SNE) : Run the Jupyter notebook accordingly. Based on the generated text file (which is generated by the notebook as well) in `data/tsne/img_lists`, 10 toy identities are selected to plot the t-SNE points, which will be generated in the `graphs` directory.
@@ -66,7 +61,7 @@ Download dataset (training and testing) from [this link](https://www.dropbox.com
 
 | Method | Intra-Modal Rank-1 IR (%) <br> (Periocular) | Intra-Modal Rank-1 EER (%) <br> (Periocular) | Intra-Modal EER (%) <br> (Periocular Gallery) | Inter-Modal EER (%) <br> (Periocular-Face) |
 | --- | --- | --- | --- | --- |
-| [PF-GLSR](https://www.dropbox.com/scl/fo/o7rxtbws8g3fmhwkg0f08/h?rlkey=083q0xzibpsfubxmt3d31pa8d&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/9159854) | 79.03 | 15.56 | N/A | N/A |
-| [CMB-Net](https://www.dropbox.com/scl/fo/o7rxtbws8g3fmhwkg0f08/h?rlkey=083q0xzibpsfubxmt3d31pa8d&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/9956636) | 86.96 | 9.62 | 77.26 | 9.80 |
-| [HA-ViT](https://www.dropbox.com/scl/fo/o7rxtbws8g3fmhwkg0f08/h?rlkey=083q0xzibpsfubxmt3d31pa8d&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/10068230) | 77.75 | 11.39 | 64.72 | 13.14 |
-| [GC<sup>2</sup>SA-Net](https://www.dropbox.com/scl/fo/j7tfsk61jz6dch8hyl1hp/h?rlkey=b22nw4ff5kelu5ivti7ioy1mr&dl=0) | 93.63 | 6.39 | 90.77 | 6.50 |
+| PF-GLSR [(Paper)](https://ieeexplore.ieee.org/document/9159854) | 79.03 | 15.56 | N/A | N/A |
+| CMB-Net [(Paper)](https://ieeexplore.ieee.org/document/9956636) | 86.96 | 9.62 | 77.26 | 9.80 |
+| HA-ViT [(Paper)](https://ieeexplore.ieee.org/document/10068230) | 77.75 | 11.39 | 64.72 | 13.14 |
+| [GC<sup>2</sup>SA-Net](https://www.dropbox.com/scl/fo/j7tfsk61jz6dch8hyl1hp/h?rlkey=b22nw4ff5kelu5ivti7ioy1mr&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/10418204) | 93.63 | 6.39 | 90.77 | 6.50 |

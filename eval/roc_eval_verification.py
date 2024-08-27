@@ -1,38 +1,29 @@
 import os, sys, copy
+sys.path.insert(0, os.path.abspath('.'))
 import torch
 import numpy as np
 import torchvision.transforms as transforms
 import torch.utils.data as data
 from PIL import Image
 from sklearn.metrics import roc_auc_score, plot_roc_curve, roc_curve
-sys.path.insert(0, os.path.abspath('.'))
-from configs import datasets_config as config
-import network.SOTA.HA_ViT.HA_ViT as net
+from torch.nn import functional as F
+import network.gc2sa_net as net
 from network import load_model
+import time
+from configs import datasets_config as config
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-batch_size = 400
+batch_size = 500
 eer_dict = {'ethnic' : 0, 'pubfig' : 0, 'facescrub': 0, 'imdb_wiki' : 0, 'ar' : 0}
-eer_dict = {}
 auc_dict = {}
 fpr_dict = {}
 tpr_dict = {}
 dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar']
 ver_img_per_class = 4
-
-
-def compute_eer(fpr,tpr):
-    """ Returns equal error rate (EER) and the corresponding threshold. """
-    fnr = 1-tpr
-    abs_diffs = np.abs(fpr - fnr)
-    min_index = np.argmin(abs_diffs)
-    eer = np.mean((fpr[min_index], fnr[min_index]))
-    eer = np.around(eer, 4)
-    return eer
 
 
 def create_folder(method):
@@ -43,16 +34,47 @@ def create_folder(method):
             os.makedirs(os.path.join(boiler_path, method, modal))
 
 
+def eer_calc(gen_dist, imp_dist):
+    gen_dist, imp_dist = np.array(gen_dist), np.array(imp_dist)
+    gens = np.ones(len(gen_dist))
+    imps = np.zeros(len(imp_dist))
+
+    lbl_lst = np.hstack((gens, imps))
+    dist_lst = np.hstack((gen_dist, imp_dist))
+
+    far_, tar_, threshold = roc_curve(lbl_lst, dist_lst, pos_label=1)
+    frr_ = 1 - tar_
+    eer_ = far_[np.nanargmin(np.absolute((frr_ - far_)))]
+    auc_ = roc_auc_score(lbl_lst, dist_lst)
+
+    return eer_, far_, tar_, auc_
+
+
 def get_avg(dict_list):
     total_eer = 0
+    eer_list = []
     if 'avg' in dict_list.keys():
         del dict_list['avg']
+    if 'std' in dict_list.keys():
+        del dict_list['std']
     for items in dict_list:
         total_eer += dict_list[items]
-    dict_list['avg'] = total_eer/len(dict_list)
+        eer_list.append(dict_list[items])
+    dict_list['avg'] = total_eer/len(dict_list) * 100
+    dict_list['std'] = np.std(np.array(eer_list)) * 100
 
     return dict_list
 
+
+def compute_eer(fpr,tpr):
+    """ Returns equal error rate (EER) and the corresponding threshold. """
+    fnr = 1-tpr
+    abs_diffs = np.abs(fpr - fnr)
+    min_index = np.argmin(abs_diffs)
+    eer = np.mean((fpr[min_index], fnr[min_index]))
+    eer = np.around(eer, 4)
+    return eer
+    
 
 class dataset(data.Dataset):
     def __init__(self, dset, root_drt, modal, dset_type='gallery'):
@@ -61,7 +83,7 @@ class dataset(data.Dataset):
         elif modal[:4] == 'face':
             sz = (112, 112)
         
-        self.ocular_root_dir = os.path.join(os.path.join(root_drt, dset, dset_type), modal[:4])
+        self.ocular_root_dir = os.path.join(os.path.join(root_drt, dset, dset_type), modal)
         self.nof_identity = len(os.listdir(self.ocular_root_dir))
         self.ocular_img_dir_list = []
         self.label_list = []
@@ -86,7 +108,7 @@ class dataset(data.Dataset):
 
         self.ocular_transform = transforms.Compose([transforms.Resize(sz),
                                      transforms.ToTensor(),
-                                     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
+                                     transforms.Normalize([0.5,0.5,0.5], [0.5,0.5,0.5])])
 
     def __len__(self):
         return len(self.ocular_img_dir_list)
@@ -98,31 +120,7 @@ class dataset(data.Dataset):
         return ocular, onehot
     
 
-def get_scores(embedding_mat, label_mat):
-    score_mat = torch.matmul(embedding_mat, embedding_mat.t()).cpu()
-    gen_mat = torch.matmul(label_mat, label_mat.t()).cpu()
-    gen_r, gen_c = torch.where(gen_mat == 1)
-    imp_r, imp_c = torch.where(gen_mat == 0)
-
-    gen_score = score_mat[gen_r, gen_c].cpu().numpy()
-    imp_score = score_mat[imp_r, imp_c].cpu().numpy()
-
-    y_gen = np.ones(gen_score.shape[0])
-    y_imp = np.zeros(imp_score.shape[0])
-
-    score = np.concatenate((gen_score, imp_score))
-    y = np.concatenate((y_gen, y_imp))
-
-    # normalization scores into [ -1, 1]
-    score_min = np.amin(score)
-    score_max = np.amax(score)
-    score = ( score - score_min ) / ( score_max - score_min )
-    score = 2.0 * score - 1.0
-
-    return score, y
-
-
-def intramodal_verify(model, emb_size = 512, root_drt=config.evaluation['verification'], peri_flag=True, device='cuda:0', mode='verify'):
+def intramodal_verify(model, emb_size=512, root_drt=config.evaluation['verification'], peri_flag=True, device='cuda:0', eval_mode='verify'):
     if peri_flag is True:
         modal = 'peri'
     else:
@@ -132,9 +130,9 @@ def intramodal_verify(model, emb_size = 512, root_drt=config.evaluation['verific
         embedding_size = emb_size       
         
         if dset_name == 'ethnic':
-            dset = dataset(dset=dset_name, dset_type='Verification/gallery', root_drt = root_drt, modal=modal)
+            dset = dataset(dset=dset_name, dset_type='Verification/gallery', root_drt=root_drt, modal=modal)
         else:
-            dset = dataset(dset=dset_name, dset_type='gallery', root_drt = root_drt, modal=modal)
+            dset = dataset(dset=dset_name, dset_type='gallery', root_drt=root_drt, modal=modal)
 
         dloader = torch.utils.data.DataLoader(dset, batch_size=batch_size, num_workers=4)
         nof_dset = len(dset)
@@ -149,7 +147,7 @@ def intramodal_verify(model, emb_size = 512, root_drt=config.evaluation['verific
                 ocular = ocular.to(device)
                 onehot = onehot.to(device)
 
-                feature, _ = model(ocular.unsqueeze(1), peri_flag=False)
+                feature = model(ocular, peri_flag=False)
 
                 embedding_mat[i*batch_size:i*batch_size+nof_img, :] = feature.detach().clone()
                 label_mat[i*batch_size:i*batch_size+nof_img, :] = onehot
@@ -184,22 +182,22 @@ def intramodal_verify(model, emb_size = 512, root_drt=config.evaluation['verific
             auc_dict[dset_name] = auc
             eer_dict[dset_name] = compute_eer(fpr_tmp, tpr_tmp)
 
-    if mode == 'verify':
+    if eval_mode == 'verify':
         return eer_dict
-    elif mode == 'roc':
+    elif eval_mode == 'roc':
         return eer_dict, fpr_dict, tpr_dict, auc_dict
 
 
-def intermodal_verify(model, face_model, peri_model, emb_size = 512, root_drt=config.evaluation['verification'], device='cuda:0', mode='verify'):
+def intermodal_verify(model, face_model, peri_model, emb_size=512, root_drt=config.evaluation['verification'], device='cuda:0', eval_mode='verify'):
     for dset_name in dset_list:
         embedding_size = emb_size       
         
         if dset_name == 'ethnic':
-            peri_dset = dataset(dset=dset_name, dset_type='Verification/gallery', root_drt = root_drt, modal='peri')
-            face_dset = dataset(dset=dset_name, dset_type='Verification/gallery', root_drt = root_drt, modal='face')
+            peri_dset = dataset(dset=dset_name, dset_type='Verification/gallery', root_drt=root_drt, modal='peri')
+            face_dset = dataset(dset=dset_name, dset_type='Verification/gallery', root_drt=root_drt, modal='face')
         else:
-            peri_dset = dataset(dset=dset_name, dset_type='gallery', root_drt = root_drt, modal='peri')
-            face_dset = dataset(dset=dset_name, dset_type='gallery', root_drt = root_drt, modal='face')
+            peri_dset = dataset(dset=dset_name, dset_type='gallery', root_drt=root_drt, modal='peri')
+            face_dset = dataset(dset=dset_name, dset_type='gallery', root_drt=root_drt, modal='face')
 
         peri_dloader = torch.utils.data.DataLoader(peri_dset, batch_size=batch_size, num_workers=4)
         nof_peri_dset = len(peri_dset)
@@ -224,9 +222,9 @@ def intermodal_verify(model, face_model, peri_model, emb_size = 512, root_drt=co
                 peri_onehot = peri_onehot.to(device)
 
                 if not peri_model is None:
-                    peri_feature, _ = peri_model(peri_ocular.unsqueeze(1), peri_flag = False)
+                    peri_feature = peri_model(peri_ocular, peri_flag=False)
                 else:
-                    peri_feature, _ = model(peri_ocular.unsqueeze(1), peri_flag = False)
+                    peri_feature = model(peri_ocular, peri_flag=False)
 
                 peri_embedding_mat[i*batch_size:i*batch_size+nof_peri_img, :] = peri_feature.detach().clone()                
                 peri_label_mat[i*batch_size:i*batch_size+nof_peri_img, :] = peri_onehot
@@ -238,9 +236,9 @@ def intermodal_verify(model, face_model, peri_model, emb_size = 512, root_drt=co
                 face_onehot = face_onehot.to(device)
 
                 if not face_model is None:
-                    face_feature, _ = face_model(face_ocular.unsqueeze(1), peri_flag = False)
+                    face_feature = face_model(face_ocular, peri_flag=False)
                 else:
-                    face_feature, _ = model(face_ocular.unsqueeze(1), peri_flag = False)
+                    face_feature = model(face_ocular, peri_flag=False)
 
                 face_embedding_mat[i*batch_size:i*batch_size+nof_face_img, :] = face_feature.detach().clone()
                 face_label_mat[i*batch_size:i*batch_size+nof_face_img, :] = face_onehot
@@ -278,45 +276,26 @@ def intermodal_verify(model, face_model, peri_model, emb_size = 512, root_drt=co
             auc_dict[dset_name] = auc
             eer_dict[dset_name] = compute_eer(fpr_tmp, tpr_tmp)
 
-    if mode == 'verify':
+    if eval_mode == 'verify':
         return eer_dict
-    elif mode == 'roc':
+    elif eval_mode == 'roc':
         return eer_dict, fpr_dict, tpr_dict, auc_dict
-    
 
-if __name__ == '__main__':    
-    method = 'ha_vit'
-    create_folder(method)
+
+if __name__ == '__main__':
+    method = 'gc2sa_net'
+    eval_mode = 'roc' # ROC (graph) or verification (values)
+    if eval_mode == 'roc':
+        create_folder(method)    
     embd_dim = 1024
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    load_model_path = './models/sota/HA-ViT.pth'
-    model = net.HA_ViT(img_size=112, patch_size=8, in_chans=3, embed_dim=1024, num_classes_list=(1054,),
-                   layer_depth=3, num_heads=8, mlp_ratio=4., norm_layer=None, drop_rate=0., attn_drop_rate=0.,
-                   drop_path_rate=0.).to(device)
-    model = load_model.load_pretrained_network(model, load_model_path, device = device) 
+    load_model_path = './models/best_model/GC2SA-Net.pth'
+    model = net.GC2SA_Net(embedding_size=embd_dim).eval().to(device)
+    model = load_model.load_pretrained_network(model, load_model_path, device=device)
 
-    #### Verification
-    peri_eer_dict = intramodal_verify(model, emb_size = embd_dim, peri_flag = True, root_drt = config.evaluation['verification'], device = device, mode='verify')
-    peri_eer_dict = get_avg(peri_eer_dict)
-    peri_eer_dict = copy.deepcopy(peri_eer_dict)
-    print('Average (Periocular):', peri_eer_dict['avg'])
-    print('Intra-Modal (Periocular):', peri_eer_dict)    
-
-    face_eer_dict = intramodal_verify(model, emb_size = embd_dim, peri_flag = False, root_drt = config.evaluation['verification'], device = device, mode='verify')
-    face_eer_dict = get_avg(face_eer_dict)    
-    face_eer_dict = copy.deepcopy(face_eer_dict)    
-    print('Average (Face):', face_eer_dict['avg'])
-    print('Intra-Modal (Face):', face_eer_dict)    
-
-    inter_eer_dict = intermodal_verify(model, face_model = None, peri_model = None, emb_size = embd_dim, root_drt = config.evaluation['verification'], device = device, mode='verify')
-    inter_eer_dict = get_avg(inter_eer_dict) 
-    inter_eer_dict = copy.deepcopy(inter_eer_dict)       
-    print('Average:', inter_eer_dict['avg'])
-    print('Inter-Modal (Periocular-Face):', inter_eer_dict)    
-
-    #### ROC
-    peri_eer_dict, peri_fpr_dict, peri_tpr_dict, peri_auc_dict = intramodal_verify(model, embd_dim, peri_flag = True, root_drt = config.evaluation['verification'], device = device, mode='roc')
+    #### Compute ROC values
+    peri_eer_dict, peri_fpr_dict, peri_tpr_dict, peri_auc_dict = intramodal_verify(model, embd_dim, peri_flag=True, root_drt=config.evaluation['verification'], device=device, eval_mode=eval_mode)
     peri_eer_dict = get_avg(peri_eer_dict)
     peri_eer_dict = copy.deepcopy(peri_eer_dict)
     peri_fpr_dict = copy.deepcopy(peri_fpr_dict)
@@ -326,10 +305,10 @@ if __name__ == '__main__':
     torch.save(peri_fpr_dict, './data/roc/' + str(method) + '/intra_peri/peri_fpr_dict.pt')
     torch.save(peri_tpr_dict, './data/roc/' + str(method) + '/intra_peri/peri_tpr_dict.pt')
     torch.save(peri_auc_dict, './data/roc/' + str(method) + '/intra_peri/peri_auc_dict.pt')
-    print('Average (Periocular):', peri_eer_dict['avg'])
     print('Intra-Modal (Periocular): \t', peri_eer_dict)    
+    print('Average (Periocular):', peri_eer_dict['avg'], '±', peri_eer_dict['std'])    
     
-    face_eer_dict, face_fpr_dict, face_tpr_dict, face_auc_dict = intramodal_verify(model, embd_dim, peri_flag = False, root_drt = config.evaluation['verification'], device = device, mode='roc')
+    face_eer_dict, face_fpr_dict, face_tpr_dict, face_auc_dict = intramodal_verify(model, embd_dim, peri_flag=False, root_drt=config.evaluation['verification'], device=device, eval_mode=eval_mode)
     face_eer_dict = get_avg(face_eer_dict)
     face_eer_dict = copy.deepcopy(face_eer_dict)
     face_fpr_dict = copy.deepcopy(face_fpr_dict)
@@ -339,10 +318,10 @@ if __name__ == '__main__':
     torch.save(face_fpr_dict, './data/roc/' + str(method) + '/intra_face/face_fpr_dict.pt')
     torch.save(face_tpr_dict, './data/roc/' + str(method) + '/intra_face/face_tpr_dict.pt')
     torch.save(face_auc_dict, './data/roc/' + str(method) + '/intra_face/face_auc_dict.pt')   
-    print('Average (Face):', face_eer_dict['avg'])
-    print('Intra-Modal (Face): \t', face_eer_dict)     
+    print('Intra-Modal (Face): \t', face_eer_dict)  
+    print('Average (Face):', face_eer_dict['avg'], '±', face_eer_dict['std'])       
 
-    inter_eer_dict, inter_fpr_dict, inter_tpr_dict, inter_auc_dict = intermodal_verify(model, face_model = None, peri_model = None, emb_size = embd_dim, root_drt=config.evaluation['verification'], device = device, mode='roc')
+    inter_eer_dict, inter_fpr_dict, inter_tpr_dict, inter_auc_dict = intermodal_verify(model, face_model=None, peri_model=None, emb_size=embd_dim, root_drt=config.evaluation['verification'], device=device, eval_mode=eval_mode)
     inter_eer_dict = get_avg(inter_eer_dict)
     inter_eer_dict = copy.deepcopy(inter_eer_dict)
     inter_fpr_dict = copy.deepcopy(inter_fpr_dict)
@@ -352,5 +331,5 @@ if __name__ == '__main__':
     torch.save(inter_fpr_dict, './data/roc/' + str(method) + '/inter_peri-face/cm_fpr_dict.pt')
     torch.save(inter_tpr_dict, './data/roc/' + str(method) + '/inter_peri-face/cm_tpr_dict.pt')
     torch.save(inter_auc_dict, './data/roc/' + str(method) + '/inter_peri-face/cm_auc_dict.pt')
-    print('Average (Periocular-Face):', inter_eer_dict['avg'])
     print('Inter-Modal (Periocular-Face): \n', inter_eer_dict)
+    print('Average (Periocular-Face):', inter_eer_dict['avg'], '±', inter_eer_dict['std'])    

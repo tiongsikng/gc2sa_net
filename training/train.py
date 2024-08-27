@@ -101,7 +101,7 @@ def run_train(model, face_fc, peri_fc,
     
     mode = 'Train'
     iter_max = len(face_loader)
-    logger = Logger(mode, length = iter_max, calculate_mean = show_running)
+    logger = Logger(mode, length=iter_max, calculate_mean=show_running)
     
     loss = 0
     metrics = {}
@@ -309,16 +309,16 @@ def run_train(model, face_fc, peri_fc,
 
 # ********** 
 
-def feature_extractor(model, data_loader, device = 'cuda:0', peri_flag = False):    
+def feature_extractor(model, data_loader, device='cuda:0', peri_flag=False):    
     emb = torch.tensor([])
-    lbl = torch.tensor([], dtype = torch.int64)
+    lbl = torch.tensor([], dtype=torch.int64)
 
     model = model.eval().to(device)
     
     with torch.no_grad():        
         for batch_idx, (x, y) in enumerate(data_loader):
             x = x.to(device)
-            x = model(x, peri_flag = peri_flag)
+            x = model(x, peri_flag=peri_flag)
 
             emb = torch.cat((emb, x.detach().cpu()), 0)
             lbl = torch.cat((lbl, y))

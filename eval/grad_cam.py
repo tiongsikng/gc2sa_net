@@ -49,7 +49,7 @@ class GradCamModel(Module):
 
 def plot_gradcam(gradcam_model, eval_layer, image_path, root_dir='./graphs/gradcam', method='', modal='peri', base_img_pixels=(112, 112), aleph=0.9):
     from torchvision.transforms.functional import resize
-    gradcam_model = SmoothGradCAMpp(model, target_layer = eval_layer, input_shape=(3, 112, 112))
+    gradcam_model = SmoothGradCAMpp(model, target_layer=eval_layer, input_shape=(3, 112, 112))
     
     new_img_name = os.path.join(root_dir, method, modal)
     transform = transforms.Compose([    transforms.Normalize(
@@ -104,8 +104,8 @@ if __name__ == '__main__':
     # load model and set evaluation layer for GradCAM
     embd_dim = 1024
     load_model_path = './models/best_model/GC2SA-Net.pth'
-    model = net.GC2SA_Net(embedding_size = embd_dim).eval().to(device)
-    model = load_model.load_pretrained_network(model, load_model_path, device = device)
+    model = net.GC2SA_Net(embedding_size=embd_dim).eval().to(device)
+    model = load_model.load_pretrained_network(model, load_model_path, device=device)
     eval_layer = model.conv_6_sep
             
     for modality in modal:

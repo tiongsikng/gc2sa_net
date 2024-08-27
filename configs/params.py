@@ -31,29 +31,14 @@ if bn_flag == 1:
 # Softmax Classifiers
 af_s = 64
 af_m = 0.35
-cf_s = 64
-cf_m = 0.35
 
 # Activate / deactivate face_fc, peri_fc w.r.t. face_fc_ce_flag, peri_fc_ce_flag + network description
 face_fc_ce_flag = True
 peri_fc_ce_flag = True
 face_peri_loss_flag = True
-
-# CMB Loss Hyperparameters
-tl_id = -1
-tl_m = 1.0
-tl_k = 1
-tl_alpha = 10
-tl_ap = 0.001 # 0.01++
-if tl_id >= 0:
-    tl_ap = 0.0
-
 net_descr = remarks
-net_tag = str('11_1')
 
 bn_moment = float(bn_moment)
 dropout = float(dropout)
 af_s = float(af_s)
 af_m = float(af_m)
-cf_s = float(cf_s)
-cf_m = float(cf_m)

@@ -1,6 +1,6 @@
 # contains directories of database
 
-main_path = { 'main' : '/home/tiongsik/Python/gc2sa_net/data' }
+main_path = { 'main' : '/home/tiongsik/Python/conditional_biometrics/data' }
 
 evaluation = { 'identification' : main_path['main'] + '/', 'verification' : main_path['main'] }
 
