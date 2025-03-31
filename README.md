@@ -28,8 +28,6 @@ The project directory is as follows:
     * __**INSERT PRE-TRAINED MODELS HERE. The base MobileFaceNet for fine-tuning the GC<sup>2</sup>SA-Net can be downloaded in [this link](https://www.dropbox.com/scl/fi/l3k1h3tc12vy7puargfc3/MobileFaceNet_1024.pt?rlkey=m9zock9slmaivhij6sptjyzl6&st=jy9cb6oj&dl=0).**__
     * _Trained models will also be stored in this directory._
 - network: Contains loss functions and network related files.
-    * `facexzoo_network` - Directory contains architecture files from [FaceXZoo](https://github.com/JDAI-CV/FaceX-Zoo/tree/main/training_mode) repository on GitHub.
-    * flops_counter.py - Counter for Floating Point Operations (FLOPs) and number of parameters for architectures. They are stored in the files `macs_dict.pt` and `params_dict.pt`
     * gc2sa_net.py - Architecture file for GC<sup>2</sup>SA-Net.
     * load_model.py - Loads pre-trained weights based on a given model.
     * logits.py - Contains some loss functions that are used.
