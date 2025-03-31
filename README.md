@@ -57,7 +57,7 @@ Ensure that datasets are located in `data` directory. Configure `datasets_config
 
 ### Comparison with State-of-the-Art (SOTA) models
 
-| Method | Intra-Modal Rank-1 IR (%) <br> (Periocular) | Intra-Modal Rank-1 EER (%) <br> (Periocular) | Intra-Modal EER (%) <br> (Periocular Gallery) | Inter-Modal EER (%) <br> (Periocular-Face) |
+| Method | Intra-Modal Rank-1 IR (%) <br> (Periocular) | Intra-Modal Rank-1 EER (%) <br> (Periocular) | Intra-Modal IR (%) <br> (Periocular Gallery) | Inter-Modal EER (%) <br> (Periocular-Face) |
 | --- | --- | --- | --- | --- |
 | PF-GLSR [(Weights)](https://www.dropbox.com/scl/fo/gc7lnp66p706ecfr3exz2/AF6Jx_LKAeDOaKqDr2rbtMk?rlkey=skqp1kbwrd3uua1fk68qgmu01&st=dyunrk9r&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/9159854) | 79.03 | 15.56 | - | - |
 | CMB-Net [(Weights)](https://www.dropbox.com/scl/fo/h3grey98yeh0ir7i82lbd/AINQZy8eAEU3F4rXJm50MCE?rlkey=h0i1vv0a36uu4xsd2s41bdnaf&st=3ws0bo5q&dl=0) [(Paper)](https://ieeexplore.ieee.org/document/9956636) | 86.96 | 9.62 | 77.26 | 9.80 |
