@@ -9,8 +9,10 @@ from torchvision.transforms.functional import normalize, to_pil_image, to_tensor
 from PIL import Image
 from torchvision import datasets, transforms
 from torchcam.utils import overlay_mask
+
 sys.path.insert(0, os.path.abspath('.'))
 import network.gc2sa_net as net
+from configs import datasets_config as config
 from data import data_loader
 from network import load_model
 
@@ -109,7 +111,7 @@ if __name__ == '__main__':
     eval_layer = model.conv_6_sep
             
     for modality in modal:
-        image_path = '/home/tiongsik/Python/conditional_biometrics/data/gradcam_imgs/' + str(modality) + '/1/'
+        image_path = config.main_path['main'] + '/data/gradcam_imgs/' + str(modality) + '/1/' # set image path in a single class
         plot_gradcam(model, eval_layer, image_path, root_dir=root_dir,
                 method=str(method), modal=modality, base_img_pixels=pixel_size, 
                 aleph=(1-aleph))
