@@ -451,11 +451,7 @@ def intra_cmc_extractor(model, root_pth='./data/', modal='periocular', peri_flag
         print(datasets, cmc)
         # print(cmc_dict)
 
-    for ds in intra_cmc_dict:
-        total_cmc = np.append(total_cmc, np.array([intra_cmc_dict[ds]]), axis=0)
-    intra_cmc_avg_dict['avg'] = np.mean(total_cmc, axis=0)
-
-    return intra_cmc_dict, intra_cmc_avg_dict
+    return intra_cmc_dict
 
 
 def inter_cmc_extractor(model, root_pth='./data/', facenet=None, perinet=None, device='cuda:0', rank=1):
@@ -530,17 +526,9 @@ def inter_cmc_extractor(model, root_pth='./data/', facenet=None, perinet=None, d
         inter_cmc_dict_f[datasets] = cmc_f
         print(datasets)
         print('Peri Gallery:', cmc_p)        
-        print('Face Gallery:', cmc_f)        
+        print('Face Gallery:', cmc_f)
 
-    for ds in inter_cmc_dict_f:
-        total_cmc_f = np.append(total_cmc_f, np.array([inter_cmc_dict_f[ds]]), axis=0)
-    inter_cmc_avg_dict_f['avg'] = np.mean(total_cmc_f, axis=0)
-
-    for ds in inter_cmc_dict_p:
-        total_cmc_p = np.append(total_cmc_p, np.array([inter_cmc_dict_p[ds]]), axis=0)
-    inter_cmc_avg_dict_p['avg'] = np.mean(total_cmc_p, axis=0)
-
-    return inter_cmc_dict_f, inter_cmc_avg_dict_f, inter_cmc_dict_p, inter_cmc_avg_dict_p
+    return inter_cmc_dict_f, inter_cmc_dict_p
 
 
 if __name__ == '__main__':
@@ -548,7 +536,6 @@ if __name__ == '__main__':
     rank = 10  # CMC - rank > 1 (graph) or identification - rank = 1 (values)
     if rank > 1:
         create_folder(method)
-    create_folder(method)
     embd_dim = 1024
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -557,33 +544,29 @@ if __name__ == '__main__':
     model = load_model.load_pretrained_network(model, load_model_path, device=device)
 
     #### Compute CMC Values
-    peri_cmc_dict, peri_avg_dict = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='periocular', peri_flag=True, device=device, rank=rank)
+    peri_cmc_dict = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='periocular', peri_flag=True, device=device, rank=rank)
+    peri_cmc_dict = get_avg(peri_cmc_dict)
     if rank > 1:
         peri_cmc_dict = copy.deepcopy(peri_cmc_dict)
-        peri_avg_dict = copy.deepcopy(peri_avg_dict)
         torch.save(peri_cmc_dict, './data/cmc/' + str(method) + '/intra_peri/peri_cmc_dict.pt')
-        torch.save(peri_avg_dict, './data/cmc/' + str(method) + '/intra_peri/peri_avg_dict.pt')
     print('Intra-Modal (Periocular): \n', peri_cmc_dict)
-    print('Average (Periocular): \n', peri_avg_dict, '±', peri_avg_dict['std'])   
+    print('Average (Periocular): \n', peri_cmc_dict['avg'], '±', peri_cmc_dict['std'])   
 
-    face_cmc_dict, face_avg_dict = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='face', peri_flag=False, device=device, rank=rank)
+    face_cmc_dict = intra_cmc_extractor(model, root_pth=config.evaluation['identification'], modal='face', peri_flag=False, device=device, rank=rank)
+    face_cmc_dict = get_avg(face_cmc_dict)
     if rank > 1:
-        face_cmc_dict = copy.deepcopy(face_cmc_dict)
-        face_avg_dict = copy.deepcopy(face_avg_dict)       
+        face_cmc_dict = copy.deepcopy(face_cmc_dict)  
         torch.save(face_cmc_dict, './data/cmc/' + str(method) + '/intra_face/face_cmc_dict.pt') 
-        torch.save(face_avg_dict, './data/cmc/' + str(method) + '/intra_face/face_avg_dict.pt')
     print('Intra-Modal (Face): \n', face_cmc_dict)    
-    print('Average (Face): \n', face_avg_dict, '±', face_avg_dict['std'])     
+    print('Average (Face): \n', face_cmc_dict['avg'], '±', face_cmc_dict['std'])     
 
-    inter_cmc_dict_f, inter_avg_dict_f, inter_cmc_dict_p, inter_avg_dict_p = inter_cmc_extractor(model, facenet=None, perinet=None, root_pth=config.evaluation['identification'], device=device, rank=rank)
+    inter_cmc_dict_f, inter_cmc_dict_p = inter_cmc_extractor(model, facenet=None, perinet=None, root_pth=config.evaluation['identification'], device=device, rank=rank)
+    inter_cmc_dict_p = get_avg(inter_cmc_dict_p)
+    inter_cmc_dict_f = get_avg(inter_cmc_dict_f)
     if rank > 1:
         inter_cmc_dict_f = copy.deepcopy(inter_cmc_dict_f)
-        inter_avg_dict_f = copy.deepcopy(inter_avg_dict_f)
         inter_cmc_dict_p = copy.deepcopy(inter_cmc_dict_p)
-        inter_avg_dict_p = copy.deepcopy(inter_avg_dict_p)
         torch.save(inter_cmc_dict_f, './data/cmc/' + str(method) + '/inter_peri-face/cm_cmc_dict_f.pt')
-        torch.save(inter_avg_dict_f, './data/cmc/' + str(method) + '/inter_peri-face/cm_avg_dict_f.pt')
         torch.save(inter_cmc_dict_p, './data/cmc/' + str(method) + '/inter_peri-face/cm_cmc_dict_p.pt')
-        torch.save(inter_avg_dict_p, './data/cmc/' + str(method) + '/inter_peri-face/cm_avg_dict_p.pt')
     print('Inter-Modal (Periocular-Face): \n', inter_cmc_dict_p, inter_cmc_dict_f)   
-    print('Average (Periocular-Face): \n', inter_avg_dict_p, '±', inter_avg_dict_p['std'], inter_avg_dict_f, '±', inter_avg_dict_f['std'])     
+    print('Average (Periocular-Face): \n', inter_cmc_dict_f['avg'], '±', inter_cmc_dict_f['std'], inter_cmc_dict_f['avg'], '±', inter_cmc_dict_f['std'])     
