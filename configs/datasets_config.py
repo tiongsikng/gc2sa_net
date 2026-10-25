@@ -18,7 +18,7 @@ pubfig = { 'db_name' : 'pubfig',
 'face_gallery' : main_path['main'] + '/pubfig/gallery/face', 'peri_gallery' : main_path['main'] + '/pubfig/gallery/peri',
 'face_probe1' : main_path['main'] + '/pubfig/probe1/face', 'peri_probe1' : main_path['main'] + '/pubfig/probe1/peri',
 'face_probe2' : main_path['main'] + '/pubfig/probe2/face', 'peri_probe2' : main_path['main'] + '/pubfig/probe2/peri',
-'face_probe3' : main_path['main'] + '/pubfig/probe3/face', 'peri_gallery' : main_path['main'] + '/pubfig/probe3/peri' }
+'face_probe3' : main_path['main'] + '/pubfig/probe3/face', 'peri_probe3' : main_path['main'] + '/pubfig/probe3/peri' }
 
 facescrub = { 'db_name' : 'facescrub',
 'face_gallery' : main_path['main'] + '/facescrub/gallery/face', 'peri_gallery' : main_path['main'] + '/facescrub/gallery/peri',
@@ -29,7 +29,7 @@ imdb_wiki = { 'db_name' : 'imdb_wiki',
 'face_gallery' : main_path['main'] + '/imdb_wiki/gallery/face', 'peri_gallery' : main_path['main'] + '/imdb_wiki/gallery/peri',
 'face_probe1' : main_path['main'] + '/imdb_wiki/probe1/face', 'peri_probe1' : main_path['main'] + '/imdb_wiki/probe1/peri',
 'face_probe2' : main_path['main'] + '/imdb_wiki/probe2/face', 'peri_probe2' : main_path['main'] + '/imdb_wiki/probe2/peri',
-'face_probe3' : main_path['main'] + '/imdb_wiki/probe3/face', 'peri_gallery' : main_path['main'] + '/imdb_wiki/probe3/peri' }
+'face_probe3' : main_path['main'] + '/imdb_wiki/probe3/face', 'peri_probe3' : main_path['main'] + '/imdb_wiki/probe3/peri' }
 
 ar = { 'db_name' : 'ar',
 'face_gallery' : main_path['main'] + '/ar/gallery/face', 'peri_gallery' : main_path['main'] + '/ar/gallery/peri',

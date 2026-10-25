@@ -14,10 +14,19 @@
 <br/></br>
 
 ## Pre-requisites:
-- <b>Environment: </b>Check `requirements.txt` file which was generated using `pip list --format=freeze > requirements.txt` command for the environment requirement. These files are slightly filtered manually, so there may be redundant packages.
-- <b>Dataset: </b> Download dataset (training and testing) from [this link](https://www.dropbox.com/s/bfub8fmc44tvcxb/periocular_face_dataset.zip?dl=0). Password is _conditional\_biometrics_.
-Ensure that datasets are located in `data` directory. Configure `datasets_config.py` file to point to this data directory by changing main path.
-- <b>Pre-trained models: </b>(Optional) The pre-trained MobileFaceNet model for fine-tuning or testing can be downloaded from [this link](https://www.dropbox.com/scl/fi/l3k1h3tc12vy7puargfc3/MobileFaceNet_1024.pt?rlkey=m9zock9slmaivhij6sptjyzl6&st=jy9cb6oj&dl=0).
+
+### Environment
+Check `requirements.txt` file. These files are slightly filtered manually, so there may be redundant packages.
+
+### Dataset
+- Dataset (training and testing) can be downloaded from [this link](https://www.dropbox.com/scl/fi/idhbz8l276z5sq9illgqj/periocular_face_dataset.zip?rlkey=rv46tmub9mvcc7aeies2yi3bg&st=cdhrq5ge&dl=0). 
+- Researchers seeking access should email [tiongsikng@naver.com](mailto:tiongsikng@naver.com 'Request for Periocular-Face Dataset Password'), including their name, institution/affiliation, and intended research use. Requests are reviewed individually. Approved requests will receive the password for the protected archive. Access is not automatic or guaranteed.
+- Ensure that datasets are located in `data/` directory. Configure `datasets_config.py` file to point to this data directory by changing main path.
+
+### Pre-trained Models (Optional) 
+- The pre-trained MobileFaceNet model for fine-tuning or testing can be downloaded from [this link](https://www.dropbox.com/scl/fi/l3k1h3tc12vy7puargfc3/MobileFaceNet_1024.pt?rlkey=m9zock9slmaivhij6sptjyzl6&st=jy9cb6oj&dl=0).
+- The model can be placed in `models/pretrained/` directory.
+
 
 ## Training: 
 1. Change hyperparameters accordingly in `params.py` file. The set values used are the default, but it is possible to alternatively change them when running the python file.
@@ -25,13 +34,13 @@ Ensure that datasets are located in `data` directory. Configure `datasets_config
 3. Testing will be performed automatically after training is done, but it is possible to perform testing on an already trained model (see next section).
 
 ## Testing:
-1. Based on the (pre-)trained models in the `models(/pretrained)` directory, load the correct model and the architecture (in `network` directory) using `load_model.py` file. Change the file accordingly in case of different layer names, etc.
+1. Based on the (pre-)trained models in the `models/(pretrained/)` directory, load the correct model and the architecture (in `network/` directory) using `load_model.py` file. Change the file accordingly in case of different layer names, etc.
 2. Evaluation:
-    * Identification / Cumulative Matching Characteristic (CMC) curve: Run `cmc_eval_identification.py`. Based on the generated <code>.pt</code> files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate CMC graph.
-    * Verification / Receiver Operating Characteristic (ROC) curve: Run `roc_eval_verification.py`. Based on the generated <code>.pt</code> files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate ROC graph.
+    * Identification / Cumulative Matching Characteristic (CMC) curve: Run `cmc_eval_identification.py`. Based on the generated <code>.pt</code> files in `data/` directory, run `plot_cmc_roc_sota.ipynb` to generate CMC graph.
+    * Verification / Receiver Operating Characteristic (ROC) curve: Run `roc_eval_verification.py`. Based on the generated <code>.pt</code> files in `data/` directory, run `plot_cmc_roc_sota.ipynb` to generate ROC graph.
 3. Visualization:
-    * Gradient-weighted Class Activation Mapping (Grad-CAM): Run `grad_cam.py`, based on the selected images that are stored in a directory. The images will be generated in the `graphs` directory.
-    * t-distributed stochastic neighbor embedding (t-SNE) : Run the Jupyter notebook accordingly. Based on the included text file in `data/visualization/tsne/img_lists`, 10 toy identities are selected to plot the t-SNE points, which will be generated in the `graphs` directory.
+    * Gradient-weighted Class Activation Mapping (Grad-CAM): Run `grad_cam.py`, based on the selected images that are stored in a directory. The images will be generated in the `graphs/` directory.
+    * t-distributed stochastic neighbor embedding (t-SNE) : Run the Jupyter notebook accordingly. Based on the included text file in `data/visualization/tsne/img_lists`, 10 toy identities are selected to plot the t-SNE points, which will be generated in the `graphs/` directory.
 
 ## Comparison with State-of-the-Art (SOTA) models
 
